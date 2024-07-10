@@ -23,9 +23,15 @@ def generate_response(input_text, zhipuai_api_key):
     return output
 
 def get_vectordb():
+    # 定义 Embeddings
     embedding = ZhipuAIEmbeddings()
-    persist_directory = '../data_base/vector_db/chroma1'
-    vectordb = Chroma(persist_directory=persist_directory,embedding_function=embedding)
+    # 向量数据库持久化路径
+    persist_directory = '/root/llm-universe/data_base/vector_db/chroma1'
+    # 加载数据库
+    vectordb = Chroma(
+        persist_directory=persist_directory,  # 允许我们将persist_directory目录保存到磁盘上
+        embedding_function=embedding
+    )
     return vectordb
 
 #带有历史记录的问答链
@@ -48,7 +54,7 @@ def get_chat_qa_chain(question:str,zhipuai_api_key:str):
     return result['answer']
 
 #不带历史记录的问答链
-def get_qa_chain(question:str,openai_api_key:str):
+def get_qa_chain(question:str,hipuai_api_key:str):
     vectordb = get_vectordb()
     llm = ZhipuAILLM(model = "glm-4", temperature = 0.1, api_key = zhipuai_api_key)
     template = """使用以下上下文来回答最后的问题。如果你不知道答案，就说你不知道，不要试图编造答
@@ -64,7 +70,6 @@ def get_qa_chain(question:str,openai_api_key:str):
                                        chain_type_kwargs={"prompt":QA_CHAIN_PROMPT})
     result = qa_chain({"query": question})
     return result["result"]
-
 
 # Streamlit 应用程序界面
 def main():
@@ -106,4 +111,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
