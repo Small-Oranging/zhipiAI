@@ -4,10 +4,10 @@ import os
 from langchain_core.output_parsers import StrOutputParser
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
+from langchain_community.vectorstores import FAISS
 import sys
 sys.path.append("../data_base/vector_db/chroma1")
 from zhipuai_embedding import ZhipuAIEmbeddings
-from langchain.vectorstores.chroma import Chroma
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from dotenv import load_dotenv, find_dotenv
@@ -22,15 +22,45 @@ def generate_response(input_text, zhipuai_api_key):
     output = output_parser.invoke(output)
     return output
 
+def get_split_docs():
+    from langchain.document_loaders.pdf import PyMuPDFLoader
+    # 创建一个 PyMuPDFLoader Class 实例，输入为待加载的 pdf 文档路径
+    loader = PyMuPDFLoader("../data_base/knowledge_db/electricity_data.pdf")
+    # electricity_data.pdf pumkin_book/pumpkin_book.pdf
+    # 调用 PyMuPDFLoader Class 的函数 load 对 pdf 文件进行加载
+    pdf_pages = loader.load()
+
+    import re
+    pattern = re.compile(r'[^\u4e00-\u9fff](\n)[^\u4e00-\u9fff]', re.DOTALL)
+    i = 0
+    for pdf_page in pdf_pages:
+        pdf_page.page_content = re.sub(pattern, lambda match: match.group(0).replace('\n', ''), pdf_page.page_content)
+        pdf_pages[i] = pdf_page
+        i += 1
+    # print(pdf_page.page_content)
+
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    # 知识库中单段文本长度
+    CHUNK_SIZE = 500
+    # 知识库中相邻文本重合长度
+    OVERLAP_SIZE = 50
+    # 使用递归字符文本分割器
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE,chunk_overlap=OVERLAP_SIZE)
+    for pdf_page in pdf_pages:
+        text_splitter.split_text(pdf_page.page_content)
+        # print(pdf_page)
+    split_docs = text_splitter.split_documents(pdf_pages)
+    return split_docs;
+
+
 def get_vectordb():
     # 定义 Embeddings
     embedding = ZhipuAIEmbeddings()
-    # 向量数据库持久化路径
-    persist_directory = '/root/llm-universe/data_base/vector_db/chroma1'
+    split_docs = get_split_docs()
     # 加载数据库
-    vectordb = Chroma(
-        persist_directory=persist_directory,  # 允许我们将persist_directory目录保存到磁盘上
-        embedding_function=embedding
+    vectordb = FAISS.from_documents(
+        split_docs,
+        embedding
     )
     return vectordb
 
