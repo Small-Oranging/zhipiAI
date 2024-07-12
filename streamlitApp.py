@@ -1,11 +1,13 @@
 import streamlit as st
 from zhipuai_llm import ZhipuAILLM
 import os
+import re
+from langchain.document_loaders.pdf import PyMuPDFLoader
 from langchain_core.output_parsers import StrOutputParser
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import FAISS
-import sys
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from zhipuai_embedding import ZhipuAIEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
@@ -22,14 +24,12 @@ def generate_response(input_text, zhipuai_api_key):
     return output
 
 def get_split_docs():
-    from langchain.document_loaders.pdf import PyMuPDFLoader
     # 创建一个 PyMuPDFLoader Class 实例，输入为待加载的 pdf 文档路径
-    loader = PyMuPDFLoader("electricity_data.pdf")
+    loader = PyMuPDFLoader("../data_base/knowledge_db/electricity_data.pdf")
     # electricity_data.pdf pumkin_book/pumpkin_book.pdf
     # 调用 PyMuPDFLoader Class 的函数 load 对 pdf 文件进行加载
     pdf_pages = loader.load()
 
-    import re
     pattern = re.compile(r'[^\u4e00-\u9fff](\n)[^\u4e00-\u9fff]', re.DOTALL)
     i = 0
     for pdf_page in pdf_pages:
@@ -38,7 +38,6 @@ def get_split_docs():
         i += 1
     # print(pdf_page.page_content)
 
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
     # 知识库中单段文本长度
     CHUNK_SIZE = 500
     # 知识库中相邻文本重合长度
@@ -49,7 +48,7 @@ def get_split_docs():
         text_splitter.split_text(pdf_page.page_content)
         # print(pdf_page)
     split_docs = text_splitter.split_documents(pdf_pages)
-    return split_docs;
+    return split_docs
 
 
 def get_vectordb():
@@ -83,7 +82,7 @@ def get_chat_qa_chain(question:str,zhipuai_api_key:str):
     return result['answer']
 
 #不带历史记录的问答链
-def get_qa_chain(question:str,hipuai_api_key:str):
+def get_qa_chain(question:str,zhipuai_api_key:str):
     vectordb = get_vectordb()
     llm = ZhipuAILLM(model = "glm-4", temperature = 0.1, api_key = zhipuai_api_key)
     template = """使用以下上下文来回答最后的问题。如果你不知道答案，就说你不知道，不要试图编造答
