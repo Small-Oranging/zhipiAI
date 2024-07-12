@@ -6,7 +6,6 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import FAISS
 import sys
-sys.path.append("../data_base/vector_db/chroma1")
 from zhipuai_embedding import ZhipuAIEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
@@ -25,7 +24,7 @@ def generate_response(input_text, zhipuai_api_key):
 def get_split_docs():
     from langchain.document_loaders.pdf import PyMuPDFLoader
     # 创建一个 PyMuPDFLoader Class 实例，输入为待加载的 pdf 文档路径
-    loader = PyMuPDFLoader("../data_base/knowledge_db/electricity_data.pdf")
+    loader = PyMuPDFLoader("electricity_data.pdf")
     # electricity_data.pdf pumkin_book/pumpkin_book.pdf
     # 调用 PyMuPDFLoader Class 的函数 load 对 pdf 文件进行加载
     pdf_pages = loader.load()
